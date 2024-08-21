@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Line } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  BarElement,
 } from "chart.js";
 
 // Register the components with Chart.js
@@ -20,25 +21,24 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  BarElement
 );
 
-const SalesChart = () => {
+const RepeatChart = () => {
   const [chartData, setChartData] = useState(null);
   const [interval, setInterval] = useState("monthly");
 
   useEffect(() => {
     axios
       .get(
-        `http://localhost:4000/api/analytics/total-sales?interval=${interval}`
+        `http://localhost:4000/api/analytics/repeat-customers?interval=${interval}`
       )
       .then((response) => {
         const salesData = response.data;
-
         if (salesData && salesData.length > 0) {
           const labels = salesData.map((item) => item._id);
-          const data = salesData.map((item) => item.totalSales);
-
+          const data = salesData.map((item) => item.repeatCustomers);
           setChartData({
             labels,
             datasets: [
@@ -60,20 +60,46 @@ const SalesChart = () => {
       });
   }, [interval]);
 
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${context.raw}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+      },
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
+
   const handleIntervalChange = (event) => {
     setInterval(event.target.value); // Update the interval state
   };
   return (
-    <div style={{ width: "500px" }}>
+    <div>
       <select value={interval} onChange={handleIntervalChange}>
         <option value="daily">Daily</option>
         <option value="monthly">Monthly</option>
         <option value="quarterly">Quarterly</option>
         <option value="yearly">Yearly</option>
       </select>
-      {chartData ? <Line data={chartData} /> : <p>Loading...</p>}
+      {chartData ? (
+        <Bar data={chartData} options={options} />
+      ) : (
+        <p>Loading...</p>
+      )}
     </div>
   );
 };
 
-export default SalesChart;
+export default RepeatChart;
