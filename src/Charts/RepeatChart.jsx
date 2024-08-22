@@ -42,7 +42,7 @@ const RepeatChart = () => {
             labels,
             datasets: [
               {
-                label: "Repeat Customer",
+                label: "Number of Repeat Customers",
                 data,
                 backgroundColor: "rgba(75,192,192,0.2)",
                 borderColor: "rgba(75,192,192,1)",

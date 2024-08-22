@@ -41,7 +41,7 @@ const GeodistributionChart = () => {
             labels,
             datasets: [
               {
-                label: "Number of Customers",
+                label: "Geographical Distribution of Customers:",
                 data,
                 backgroundColor: "rgba(75,122,192,0.2)",
                 borderColor: "rgba(75,122,192,1)",

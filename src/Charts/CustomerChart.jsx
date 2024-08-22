@@ -47,7 +47,7 @@ const CustomersChart = () => {
             labels,
             datasets: [
               {
-                label: "New Customers",
+                label: "New Customers Added Over Time",
                 data: newCustomers,
                 backgroundColor: "rgba(153,102,255,0.2)",
                 borderColor: "rgba(153,102,255,1)",
