@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { BASE_URL } from "../services/endpoints";
 
 // Register the components with Chart.js
 ChartJS.register(
@@ -29,9 +30,7 @@ const SalesChart = () => {
 
   useEffect(() => {
     axios
-      .get(
-        `http://localhost:4000/api/analytics/total-sales?interval=${interval}`
-      )
+      .get(`${BASE_URL}/total-sales?interval=${interval}`)
       .then((response) => {
         const salesData = response.data;
 

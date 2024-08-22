@@ -13,6 +13,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { BASE_URL } from "../services/endpoints";
 
 ChartJS.register(
   CategoryScale,
@@ -33,7 +34,7 @@ const CustomersChart = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:4000/api/analytics/new-customers?interval=${selectedInterval}`
+          `${BASE_URL}/new-customers?interval=${selectedInterval}`
         );
         const responseData = response.data;
 

@@ -12,6 +12,7 @@ import {
   Legend,
   BarElement,
 } from "chart.js";
+import { BASE_URL } from "../services/endpoints";
 
 // Register the components with Chart.js
 ChartJS.register(
@@ -30,7 +31,7 @@ const GeodistributionChart = () => {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:4000/api/analytics/geographical-distribution`)
+      .get(`${BASE_URL}/geographical-distribution`)
       .then((response) => {
         const salesData = response.data;
         if (salesData && salesData.length > 0) {

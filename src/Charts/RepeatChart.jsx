@@ -12,6 +12,7 @@ import {
   Legend,
   BarElement,
 } from "chart.js";
+import { BASE_URL } from "../services/endpoints";
 
 // Register the components with Chart.js
 ChartJS.register(
@@ -31,9 +32,7 @@ const RepeatChart = () => {
 
   useEffect(() => {
     axios
-      .get(
-        `http://localhost:4000/api/analytics/repeat-customers?interval=${interval}`
-      )
+      .get(`${BASE_URL}/repeat-customers?interval=${interval}`)
       .then((response) => {
         const salesData = response.data;
         if (salesData && salesData.length > 0) {
