@@ -58,9 +58,18 @@ const GeodistributionChart = () => {
   }, []);
 
   return (
-    <div>
+    <div
+      style={{
+        // height: "600px",
+        backgroundColor: "wheat",
+        // width: "80%",
+        borderRadius: "10px",
+        padding: "20px",
+      }}
+    >
       <Bar
         data={chartData}
+        style={{ minHeight: "300px" }}
         options={{
           responsive: true,
           plugins: {

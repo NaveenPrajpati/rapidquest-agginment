@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Line } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  BarElement,
 } from "chart.js";
 
 // Register the components with Chart.js
@@ -20,33 +21,32 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  BarElement
 );
 
-const SalesChart = () => {
+const GrowthChart = () => {
   const [chartData, setChartData] = useState(null);
   const [interval, setInterval] = useState("monthly");
 
   useEffect(() => {
     axios
       .get(
-        `http://localhost:4000/api/analytics/total-sales?interval=${interval}`
+        `http://localhost:4000/api/analytics/sales-growth-rate?interval=${interval}`
       )
       .then((response) => {
         const salesData = response.data;
-
         if (salesData && salesData.length > 0) {
-          const labels = salesData.map((item) => item._id);
-          const data = salesData.map((item) => item.totalSales);
-
+          const labels = salesData.map((item) => item.period);
+          const data = salesData.map((item) => item.growthRate);
           setChartData({
             labels,
             datasets: [
               {
-                label: "Total Sales",
+                label: "Sales Growth Rate Over Time",
                 data,
-                backgroundColor: "rgba(75,192,192,0.2)",
-                borderColor: "rgba(75,192,192,1)",
+                backgroundColor: "pink",
+                borderColor: "red",
                 borderWidth: 1,
               },
             ],
@@ -60,15 +60,36 @@ const SalesChart = () => {
       });
   }, [interval]);
 
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${context.raw}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+      },
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
+
   const handleIntervalChange = (event) => {
     setInterval(event.target.value); // Update the interval state
   };
-
   return (
     <div
       style={{
         width: "48%",
-        backgroundColor: "#f4daf1",
+        backgroundColor: "#e3e7e1",
         padding: "10px",
         borderRadius: "10px",
       }}
@@ -81,13 +102,19 @@ const SalesChart = () => {
           <option value="yearly">Yearly</option>
         </select>
       </div>
-      {chartData ? (
-        <Line data={chartData} style={{ minHeight: "300px" }} />
-      ) : (
-        <p>Loading...</p>
-      )}
+      <div>
+        {chartData ? (
+          <Bar
+            data={chartData}
+            options={options}
+            style={{ minHeight: "300px" }}
+          />
+        ) : (
+          <p>Loading...</p>
+        )}
+      </div>
     </div>
   );
 };
 
-export default SalesChart;
+export default GrowthChart;

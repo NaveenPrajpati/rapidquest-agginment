@@ -1,4 +1,34 @@
+.container {
+  padding: 20px;
+  background-color: mintcream;
+}
 .app {
   padding: 20px;
+
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media screen and (min-width: 700px) {
+  .app {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.custom-select {
+  min-width: 50px;
+}
+
+.custom-select select {
+  appearance: none;
+  /* width: 40%; */
+  font-size: 0.8rem;
+  padding: 0.275em 2em 0.275em 1em;
+  background-color: #fff;
+  border: 1px solid #caced1;
+  border-radius: 0.25rem;
+  color: #000;
+  cursor: pointer;
 }

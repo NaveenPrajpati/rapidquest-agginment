@@ -43,7 +43,7 @@ const RepeatChart = () => {
             labels,
             datasets: [
               {
-                label: "Total Sales",
+                label: "Repeat Customer",
                 data,
                 backgroundColor: "rgba(75,192,192,0.2)",
                 borderColor: "rgba(75,192,192,1)",
@@ -86,15 +86,28 @@ const RepeatChart = () => {
     setInterval(event.target.value); // Update the interval state
   };
   return (
-    <div>
-      <select value={interval} onChange={handleIntervalChange}>
-        <option value="daily">Daily</option>
-        <option value="monthly">Monthly</option>
-        <option value="quarterly">Quarterly</option>
-        <option value="yearly">Yearly</option>
-      </select>
+    <div
+      style={{
+        width: "48%",
+        backgroundColor: "#e3e7e1",
+        padding: "10px",
+        borderRadius: "10px",
+      }}
+    >
+      <div className="custom-select">
+        <select value={interval} onChange={handleIntervalChange}>
+          <option value="daily">Daily</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
       {chartData ? (
-        <Bar data={chartData} options={options} />
+        <Bar
+          data={chartData}
+          options={options}
+          style={{ minHeight: "300px" }}
+        />
       ) : (
         <p>Loading...</p>
       )}

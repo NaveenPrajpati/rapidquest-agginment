@@ -8,43 +8,184 @@ const router = express.Router();
 
 // Total Sales Over Time
 router.get("/total-sales", async (req, res) => {
-  const { interval } = req.query; // interval can be daily, monthly, quarterly, yearly
-
-  // Grouping criteria based on the interval
-  const groupBy = {
-    daily: { $dateToString: { format: "%Y-%m-%d", date: "$created_at_date" } },
-    monthly: { $dateToString: { format: "%Y-%m", date: "$created_at_date" } },
-    quarterly: { $dateToString: { format: "%Y-Q", date: "$created_at_date" } },
-    yearly: { $dateToString: { format: "%Y", date: "$created_at_date" } },
-  };
-
   try {
-    const sales = await orderModel.aggregate([
-      // Convert 'created_at' to a date
-      {
-        $addFields: {
-          created_at_date: { $toDate: "$created_at" },
-        },
-      },
-      // Group by the interval
+    const interval = req.query.interval || "daily"; // Can be 'daily', 'monthly', 'quarterly', 'yearly'
+
+    let groupBy;
+    switch (interval) {
+      case "daily":
+        groupBy = {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      case "monthly":
+        groupBy = {
+          $dateToString: {
+            format: "%Y-%m",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      case "quarterly":
+        groupBy = {
+          $concat: [
+            {
+              $dateToString: {
+                format: "%Y",
+                date: { $dateFromString: { dateString: "$created_at" } },
+              },
+            },
+            "-Q",
+            {
+              $ceil: {
+                $divide: [
+                  {
+                    $month: { $dateFromString: { dateString: "$created_at" } },
+                  },
+                  3,
+                ],
+              },
+            },
+          ],
+        };
+        break;
+      case "yearly":
+        groupBy = {
+          $dateToString: {
+            format: "%Y",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      default:
+        return res.status(400).json({ error: "Invalid interval specified" });
+    }
+
+    const salesData = await orderModel.aggregate([
       {
         $group: {
-          _id: groupBy[interval],
-          totalSales: { $sum: "$total_price_set.shop_money.amount" },
+          _id: groupBy,
+          totalSales: {
+            $sum: { $toDouble: "$total_price_set.shop_money.amount" },
+          },
+          count: { $sum: 1 },
         },
       },
-      // Sort by the group key (_id)
-      { $sort: { _id: 1 } },
+      {
+        $sort: { _id: 1 },
+      },
     ]);
 
-    res.json(sales);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.json(salesData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 router.get("/sales-growth-rate", async (req, res) => {
-  // Similar to the total sales but compute growth rate between intervals
+  try {
+    const interval = req.query.interval || "monthly"; // Can be 'daily', 'monthly', 'quarterly', 'yearly'
+
+    let groupBy;
+    switch (interval) {
+      case "daily":
+        groupBy = {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      case "monthly":
+        groupBy = {
+          $dateToString: {
+            format: "%Y-%m",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      case "quarterly":
+        groupBy = {
+          $concat: [
+            {
+              $dateToString: {
+                format: "%Y",
+                date: { $dateFromString: { dateString: "$created_at" } },
+              },
+            },
+            "-Q",
+            {
+              $ceil: {
+                $divide: [
+                  {
+                    $month: { $dateFromString: { dateString: "$created_at" } },
+                  },
+                  3,
+                ],
+              },
+            },
+          ],
+        };
+        break;
+      case "yearly":
+        groupBy = {
+          $dateToString: {
+            format: "%Y",
+            date: { $dateFromString: { dateString: "$created_at" } },
+          },
+        };
+        break;
+      default:
+        return res.status(400).json({ error: "Invalid interval specified" });
+    }
+
+    // First, calculate the total sales for each period
+    const salesData = await orderModel.aggregate([
+      {
+        $group: {
+          _id: groupBy,
+          totalSales: {
+            $sum: { $toDouble: "$total_price_set.shop_money.amount" },
+          },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // Calculate the growth rate
+    const growthRateData = salesData.map((current, index, array) => {
+      if (index === 0) {
+        // First period has no previous period to compare, so growth rate is undefined or 0
+        return {
+          period: current._id,
+          totalSales: current.totalSales,
+          growthRate: null,
+        };
+      } else {
+        const previous = array[index - 1];
+        const growthRate =
+          ((current.totalSales - previous.totalSales) / previous.totalSales) *
+          100;
+
+        return {
+          period: current._id,
+          totalSales: current.totalSales,
+          growthRate: growthRate.toFixed(2), // Round to 2 decimal places
+        };
+      }
+    });
+
+    res.json(growthRateData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // New Customers Added Over Time
@@ -91,11 +232,7 @@ router.get("/repeat-customers", async (req, res) => {
       $concat: [
         { $toString: { $year: "$created_at" } },
         "-Q",
-        {
-          $toString: {
-            $ceil: { $divide: [{ $month: "$created_at" }, 3] },
-          },
-        },
+        { $toString: { $ceil: { $divide: [{ $month: "$created_at" }, 3] } } },
       ],
     },
     yearly: { $dateToString: { format: "%Y", date: "$created_at" } },
@@ -107,22 +244,27 @@ router.get("/repeat-customers", async (req, res) => {
 
   try {
     const repeatCustomers = await orderModel.aggregate([
-      // Stage 1: Convert created_at to date if necessary
+      // Stage 1: Convert created_at to a date if necessary
       { $addFields: { created_at: { $toDate: "$created_at" } } },
 
-      // Stage 2: Group by customer_id and created_at according to the interval
+      // Stage 2: Group by customer_id and the selected interval to count purchases
       {
         $group: {
           _id: { customer_id: "$customer_id", date: groupBy[interval] },
-          count: { $sum: 1 },
+          orderCount: { $sum: 1 },
         },
       },
 
-      // Stage 3: Filter customers who have made more than one purchase in that interval
-      { $match: { count: { $gt: 1 } } },
+      // Stage 3: Filter to find customers who made more than one purchase in that interval
+      { $match: { orderCount: { $gt: 1 } } },
 
-      // Stage 4: Group by the date part of the interval and count the number of repeat customers
-      { $group: { _id: "$_id.date", repeatCustomers: { $sum: 1 } } },
+      // Stage 4: Group by the interval date and count how many customers are repeat customers
+      {
+        $group: {
+          _id: "$_id.date",
+          repeatCustomers: { $sum: 1 },
+        },
+      },
 
       // Stage 5: Sort by the interval date
       { $sort: { _id: 1 } },
@@ -130,6 +272,7 @@ router.get("/repeat-customers", async (req, res) => {
 
     res.json(repeatCustomers);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -150,36 +293,49 @@ router.get("/geographical-distribution", async (req, res) => {
 // Customer Lifetime Value by Cohorts
 router.get("/customer-lifetime-value", async (req, res) => {
   try {
-    // Step 1: Aggregate customers to get their first purchase month
+    // Step 1: Aggregate customers to get their first purchase month and total spent
     const cohorts = await ShopifyCustomer.aggregate([
+      // Step 1: Lookup orders related to each customer
       {
         $lookup: {
-          from: "orders", // Replace with your orders collection name
+          from: "shopifyOrders", // Replace with your orders collection name
           localField: "id", // Assuming 'id' is the customer identifier
           foreignField: "customer_id",
-          as: "orders",
+          as: "shopifyOrders",
         },
       },
+      // Step 2: Filter customers who have made at least one order
+      {
+        $match: {
+          orders: { $ne: [] },
+        },
+      },
+      // Step 3: Unwind the orders array
       {
         $unwind: "$orders",
       },
+      // Step 4: Sort orders by created_at to find the first purchase
       {
         $sort: {
           "orders.created_at": 1,
         },
       },
+      // Step 5: Group by customer ID to calculate first purchase month and total spent
       {
         $group: {
           _id: "$id",
           firstPurchaseMonth: {
-            $dateToString: {
-              format: "%Y-%m",
-              date: { $arrayElemAt: ["$orders.created_at", 0] },
+            $first: {
+              $dateToString: {
+                format: "%Y-%m",
+                date: "$orders.created_at",
+              },
             },
           },
           totalSpent: { $sum: "$orders.total_amount" }, // Adjust field name as needed
         },
       },
+      // Step 6: Group by first purchase month to calculate cohort lifetime value and count
       {
         $group: {
           _id: "$firstPurchaseMonth",
@@ -187,8 +343,17 @@ router.get("/customer-lifetime-value", async (req, res) => {
           customersCount: { $sum: 1 },
         },
       },
+      // Step 7: Calculate the average CLTV per cohort
       {
-        $sort: { _id: 1 },
+        $project: {
+          cohortMonth: "$_id",
+          averageCLTV: { $divide: ["$totalLifetimeValue", "$customersCount"] },
+          _id: 0,
+        },
+      },
+      // Step 8: Sort by cohort month
+      {
+        $sort: { cohortMonth: 1 },
       },
     ]);
 
